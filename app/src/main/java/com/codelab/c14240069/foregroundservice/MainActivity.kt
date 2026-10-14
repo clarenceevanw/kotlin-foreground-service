@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +14,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import java.util.Calendar
 
 class MainActivity : AppCompatActivity() {
     private val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -90,7 +92,26 @@ class MainActivity : AppCompatActivity() {
     private fun handleIntent(intent: Intent) {
         if (intent?.action == ACTON_SERVICE_STOPPED_JUMP) {
             statusTextView.text = "Foreground service sudah berhenti karena Anda melompat"
+        } else if (intent?.action == ACTION_EXERCISE_FINISHED) {
+            val totalJumps = intent.getIntExtra(EXTRA_JUMP_COUNT, 0)
+            statusTextView.text = "Latihan Selesai!\nJumlah Lompatan Anda: $totalJumps kali"
+
+            createCalendarEvent(totalJumps)
         }
+    }
+
+    private fun createCalendarEvent(jumpCount: Int) {
+        val startMillis = Calendar.getInstance().timeInMillis
+        val endMillis = startMillis + (30 * 60 * 1000)
+
+        val calendarIntent = Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.Events.TITLE, "Latihan Fisik (Lompat: $jumpCount kali)")
+            putExtra(CalendarContract.Events.DESCRIPTION, "Latihan selesai dengan total $jumpCount lompatan dan berjalan > 2 langkah.")
+            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startMillis)
+            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endMillis)
+        }
+        startActivity(calendarIntent)
     }
 
     override fun onNewIntent(intent: Intent) {

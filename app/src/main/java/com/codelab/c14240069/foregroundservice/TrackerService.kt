@@ -74,6 +74,34 @@ class TrackerService : Service(), SensorEventListener {
 
     private fun finishExercise() {
         sensorManager.unregisterListener(this)
+        val mainActivityIntent = Intent(this, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_EXERCISE_FINISHED
+            putExtra(MainActivity.EXTRA_JUMP_COUNT, jumpCount)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        startActivity(mainActivityIntent)
+
+        val pendingMainActivityIntent = PendingIntent.getActivity(
+            this, 2, mainActivityIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val finishNotification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_JUMP_DETECTED)
+            .setContentTitle("Latihan Selesai!")
+            .setContentText("Total Lompatan: $jumpCount. Ketuk untuk membuka aplikasi & menyimpan ke Kalender.")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentIntent(pendingMainActivityIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_JUMP_DETECTED, finishNotification)
+        } catch (e: SecurityException) {
+            Log.e("TrackerService", "Gagal memunculkan notifikasi: ${e.message}")
+        }
+        
         stopSelf()
     }
 
