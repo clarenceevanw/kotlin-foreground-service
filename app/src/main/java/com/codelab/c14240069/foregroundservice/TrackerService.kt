@@ -28,6 +28,11 @@ class TrackerService : Service(), SensorEventListener {
     private val NOTIFICATION_ID_SERVICE_RUNNING = 1
     private val NOTIFICATION_ID_JUMP_DETECTED = 2
 
+    private var isExerciseMode = false
+    private var jumpCount = 0
+    private var stepCount = 0
+    private var lastEventTime = 0L
+
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
@@ -67,8 +72,20 @@ class TrackerService : Service(), SensorEventListener {
         }
     }
 
+    private fun finishExercise() {
+        sensorManager.unregisterListener(this)
+        stopSelf()
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("TrackerService", "Service onStartCommand")
+
+        isExerciseMode = intent?.getBooleanExtra(MainActivity.EXTRA_IS_EXERCISE, false) ?: false
+        if (isExerciseMode) {
+            jumpCount = 0
+            stepCount = 0
+            Log.d("TrackerService", "Mode Latihan Dimulai!")
+        }
 
         startForeground(
             NOTIFICATION_ID_SERVICE_RUNNING,
@@ -109,14 +126,35 @@ class TrackerService : Service(), SensorEventListener {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             val y = event.values[1]
             val jumpThreshold = 15.0
+            val stepThreshold = 12.0
 
-            if (abs(y) > jumpThreshold) {
-                Log.d("TrackerService", "LOMPATAN terdeteksi! y:$y")
+            if (!isExerciseMode) {
+                if (abs(y) > jumpThreshold) {
+                    Log.d("TrackerService", "LOMPATAN terdeteksi! y:$y")
 
-                sensorManager.unregisterListener(this)
+                    sensorManager.unregisterListener(this)
 
-                showJumpNotification()
-                stopSelf()
+                    showJumpNotification()
+                    stopSelf()
+                }
+            } else {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastEventTime > 500) {
+                    if (abs(y) > jumpThreshold) {
+                        jumpCount++
+                        lastEventTime = currentTime
+                        Log.d("TrackerService", "Latihan - Lompatan ke-$jumpCount (y: $y)")
+                    } else if (abs(y) > stepThreshold) {
+                        stepCount++
+                        lastEventTime = currentTime
+                        Log.d("TrackerService", "Latihan - Langkah ke-$stepCount (y: $y)")
+
+                        if (stepCount > 2) {
+                            Log.d("TrackerService", "Latihan Selesai! Total Lompatan: $jumpCount, Langkah: $stepCount")
+                            finishExercise()
+                        }
+                    }
+                }
             }
         }
     }
