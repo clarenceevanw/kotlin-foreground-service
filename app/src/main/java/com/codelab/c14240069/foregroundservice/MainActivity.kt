@@ -1,12 +1,16 @@
 package com.codelab.c14240069.foregroundservice
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
@@ -33,6 +37,55 @@ class MainActivity : AppCompatActivity() {
         const val ACTON_SERVICE_STOPPED_JUMP = "com.codelab.c14240069.foregroundservice.ACTION_SERVICE_STOPPED_JUMP"
         const val REQUEST_CODE_PERMISSIONS = 101
     }
+
+    private fun hasAllPermissions(): Boolean {
+        return permissionToRequest.all {
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun startTrackerService() {
+        val serviceIntent = Intent(this, TrackerService::class.java)
+        ContextCompat.startForegroundService(this, serviceIntent)
+        statusTextView.text = "Foreground Service sedang berjalan..."
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            var allPermissionsGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allPermissionsGranted = false
+                    break
+                }
+            }
+            if (allPermissionsGranted) {
+                val serviceIntent = Intent(this, TrackerService::class.java)
+                ContextCompat.startForegroundService(this, serviceIntent)
+                finish()
+            } else {
+                statusTextView.text = "Izin ditolak, service tidak dapat dijalankan"
+            }
+        }
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent?.action == ACTON_SERVICE_STOPPED_JUMP) {
+            statusTextView.text = "Foreground service sudah berhenti karena Anda melompat"
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -42,5 +95,19 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
+        btnStart.setOnClickListener {
+            if (hasAllPermissions()) {
+                startTrackerService()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    permissionToRequest,
+                    REQUEST_CODE_PERMISSIONS
+                )
+            }
+        }
+
+        handleIntent(intent)
     }
 }
