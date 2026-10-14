@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity() {
 
         btnLatihan.setOnClickListener {
             if (hasAllPermissions()) {
-                startExcerciseService()
+                startExerciseService()
             } else {
                 ActivityCompat.requestPermissions(
                     this,
