@@ -33,8 +33,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var statusTextView: TextView
     private lateinit var btnStart: Button
 
+    private lateinit var btnLatihan: Button
+
     companion object {
         const val ACTON_SERVICE_STOPPED_JUMP = "com.codelab.c14240069.foregroundservice.ACTION_SERVICE_STOPPED_JUMP"
+        const val ACTION_EXERCISE_FINISHED = "com.codelab.c14240069.foregroundservice.ACTION_EXERCISE_FINISHED"
+        const val EXTRA_IS_EXERCISE = "EXTRA_IS_EXERCISE"
+        const val EXTRA_JUMP_COUNT = "EXTRA_JUMP_COUNT"
         const val REQUEST_CODE_PERMISSIONS = 101
     }
 
@@ -48,6 +53,14 @@ class MainActivity : AppCompatActivity() {
         val serviceIntent = Intent(this, TrackerService::class.java)
         ContextCompat.startForegroundService(this, serviceIntent)
         statusTextView.text = "Foreground Service sedang berjalan..."
+    }
+
+    private fun startExerciseService() {
+        val serviceIntent = Intent(this, TrackerService::class.java).apply {
+            putExtra(EXTRA_IS_EXERCISE, true)
+        }
+        ContextCompat.startForegroundService(this, serviceIntent)
+        statusTextView.text = "Mode Latihan sedang berjalan..."
     }
 
     override fun onRequestPermissionsResult(
@@ -98,6 +111,19 @@ class MainActivity : AppCompatActivity() {
 
         statusTextView = findViewById<TextView>(R.id.statusTextView)
         btnStart = findViewById<Button>(R.id.btnStart)
+        btnLatihan = findViewById<Button>(R.id.btnLatihan)
+
+        btnLatihan.setOnClickListener {
+            if (hasAllPermissions()) {
+                startExcerciseService()
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    permissionToRequest,
+                    REQUEST_CODE_PERMISSIONS
+                )
+            }
+        }
 
         btnStart.setOnClickListener {
             if (hasAllPermissions()) {
